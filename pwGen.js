@@ -17,7 +17,7 @@ function generatePassword(length, useUppercase, useLowercase, useNumbers, useSpe
   }
 
   if (useSpecialChars) {
-    charset += '!@#$%^&*()_+~`|}{[]\:;?><,./-=';
+    charset += '!@#$%^&*()_+~`|}{[]:;?><,./-=';
   }
 
   var password = '';
@@ -29,36 +29,48 @@ function generatePassword(length, useUppercase, useLowercase, useNumbers, useSpe
   return password;
 }
 
-// Create a readline interface
-const rl = readline.createInterface({
-  input: process.stdin,
-  output: process.stdout
-});
-
-// Prompt the user for password criteria
-rl.question("Enter the desired password length: ", function(length) {
-  length = parseInt(length);
-  
-  rl.question("Include uppercase letters? (y/n) ", function(useUppercase) {
-    useUppercase = (useUppercase.toLowerCase() === 'y');
-
-    rl.question("Include lowercase letters? (y/n) ", function(useLowercase) {
-      useLowercase = (useLowercase.toLowerCase() === 'y');
-
-      rl.question("Include numbers? (y/n) ", function(useNumbers) {
-        useNumbers = (useNumbers.toLowerCase() === 'y');
-
-        rl.question("Include special characters? (y/n) ", function(useSpecialChars) {
-          useSpecialChars = (useSpecialChars.toLowerCase() === 'y');
-
-          // Generate and display the password
-          var password = generatePassword(length, useUppercase, useLowercase, useNumbers, useSpecialChars);
-          console.log("Generated password: " + password);
-
-          // Close the readline interface
-          rl.close();
-        });
-      });
-    });
+function questionAsync(rl, prompt) {
+  return new Promise((resolve) => {
+    rl.question(prompt, (answer) => resolve(answer.trim()));
   });
-});
+}
+
+async function getPasswordCriteria() {
+  const rl = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout,
+  });
+
+  let length, useUppercase, useLowercase, useNumbers, useSpecialChars;
+
+  try {
+    length = parseInt(await questionAsync(rl, "Enter the desired password length: "));
+    useUppercase = (await questionAsync(rl, "Include uppercase letters? (y/n) ")).toLowerCase() === 'y';
+    useLowercase = (await questionAsync(rl, "Include lowercase letters? (y/n) ")).toLowerCase() === 'y';
+    useNumbers = (await questionAsync(rl, "Include numbers? (y/n) ")).toLowerCase() === 'y';
+    useSpecialChars = (await questionAsync(rl, "Include special characters? (y/n) ")).toLowerCase() === 'y';
+
+    // Close the readline interface
+    rl.close();
+  } catch (err) {
+    console.error("Error: Invalid input.");
+    rl.close();
+    process.exit(1);
+  }
+
+  return { length, useUppercase, useLowercase, useNumbers, useSpecialChars };
+}
+
+(async () => {
+  const passwordCriteria = await getPasswordCriteria();
+
+  // Generate and display the password
+  const password = generatePassword(
+    passwordCriteria.length,
+    passwordCriteria.useUppercase,
+    passwordCriteria.useLowercase,
+    passwordCriteria.useNumbers,
+    passwordCriteria.useSpecialChars
+  );
+  console.log("Generated password:", password);
+})();
