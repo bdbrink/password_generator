@@ -1,8 +1,8 @@
 const readline = require('readline');
+const crypto = require('crypto');
 
-// Function to generate a random password
 function generatePassword(length, useUppercase, useLowercase, useNumbers, useSpecialChars) {
-  var charset = '';
+  let charset = '';
 
   if (useUppercase) {
     charset += 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
@@ -20,20 +20,24 @@ function generatePassword(length, useUppercase, useLowercase, useNumbers, useSpe
     charset += '!@#$%^&*()_+~`|}{[]:;?><,./-=';
   }
 
-  var password = '';
-  for (var i = 0; i < length; i++) {
-    var randomIndex = Math.floor(Math.random() * charset.length);
+  if (charset.length === 0) {
+    throw new Error('Error: You must include at least one character set.');
+  }
+
+  let password = '';
+  for (let i = 0; i < length; i++) {
+    const randomIndex = crypto.randomInt(0, charset.length);
     password += charset[randomIndex];
   }
 
   return password;
 }
 
-function questionAsync(rl, prompt) {
+const questionAsync = (rl, prompt) => {
   return new Promise((resolve) => {
     rl.question(prompt, (answer) => resolve(answer.trim()));
   });
-}
+};
 
 async function getPasswordCriteria() {
   const rl = readline.createInterface({
@@ -41,10 +45,19 @@ async function getPasswordCriteria() {
     output: process.stdout,
   });
 
-  let length, useUppercase, useLowercase, useNumbers, useSpecialChars;
+  let length = 12; // Default password length
+  let useUppercase = true;
+  let useLowercase = true;
+  let useNumbers = true;
+  let useSpecialChars = true;
 
   try {
-    length = parseInt(await questionAsync(rl, "Enter the desired password length: "));
+    length = parseInt(await questionAsync(rl, "Enter the desired password length (min 8): "), 10);
+
+    if (isNaN(length) || length < 8) {
+      throw new Error('Error: Password length must be an integer of at least 8 characters.');
+    }
+
     useUppercase = (await questionAsync(rl, "Include uppercase letters? (y/n) ")).toLowerCase() === 'y';
     useLowercase = (await questionAsync(rl, "Include lowercase letters? (y/n) ")).toLowerCase() === 'y';
     useNumbers = (await questionAsync(rl, "Include numbers? (y/n) ")).toLowerCase() === 'y';
@@ -53,7 +66,7 @@ async function getPasswordCriteria() {
     // Close the readline interface
     rl.close();
   } catch (err) {
-    console.error("Error: Invalid input.");
+    console.error(err.message);
     rl.close();
     process.exit(1);
   }
